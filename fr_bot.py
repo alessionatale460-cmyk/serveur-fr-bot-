@@ -42,7 +42,7 @@ CHANNEL_DASHBOARD = int(os.environ.get("CHANNEL_DASHBOARD", "0"))
 CHANNEL_NOTIFS = int(os.environ.get("CHANNEL_NOTIFS", "0"))
 
 # Port Minecraft pour joueurs en ligne
-MC_SERVER_PORT = 25565
+MC_SERVER_PORT = 17161
 
 # Fréquence de mise à jour
 UPDATE_INTERVAL_MINUTES = 60
