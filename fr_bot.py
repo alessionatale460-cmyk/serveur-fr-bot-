@@ -14,8 +14,6 @@ import os
 import re
 import ftplib
 import io
-import socket
-import struct
 from datetime import datetime
 
 import discord
@@ -212,17 +210,10 @@ def build_dashboard(players: list[dict], online: int, maximum: int) -> discord.E
     medals = ["🥇", "🥈", "🥉"]
 
     # Statut serveur
-    if online == -1:
-        status_line = "🔴 Serveur hors ligne"
-    elif online == 0:
-        status_line = f"🟡 Serveur vide — 0/{maximum} joueurs"
-    else:
-        status_line = f"🟢 **{online}/{maximum}** joueurs en ligne"
-
     embed = discord.Embed(
         title="🎮 Tableau de bord — Serveur FR",
-        description=status_line,
-        color=0x2ECC71 if online > 0 else (0xFF0000 if online == -1 else 0xF39C12),
+        description="🟢 Serveur en ligne",
+        color=0x2ECC71,
         timestamp=datetime.utcnow(),
     )
 
@@ -335,7 +326,139 @@ async def update_dashboard():
 async def on_ready():
     print(f"[OK] Bot connecté : {client.user}")
     update_dashboard.start()
+    check_weekly_recap.start()
 
 
 if __name__ == "__main__":
     client.run(DISCORD_TOKEN)
+
+
+# ─────────────────────────────────────────
+#  RÉCAP HEBDOMADAIRE
+# ─────────────────────────────────────────
+
+# Channel pour le récap hebdomadaire
+CHANNEL_RECAP = int(os.environ.get("CHANNEL_RECAP", "0"))
+
+# Snapshot de la semaine précédente { uuid: {quests, playtime_hours} }
+last_week_snapshot: dict[str, dict] = {}
+
+
+def build_recap(players: list[dict], snapshot: dict) -> discord.Embed:
+    """Construit l'embed du récap hebdomadaire."""
+
+    now = datetime.now()
+    week_number = now.isocalendar()[1]
+
+    embed = discord.Embed(
+        title=f"📅 Récap de la semaine {week_number}",
+        description="Voici ce qui s'est passé cette semaine sur le serveur !",
+        color=0x9B59B6,
+        timestamp=now,
+    )
+
+    # Meilleure progression quêtes
+    best_progress = None
+    best_progress_count = 0
+    for p in players:
+        prev = snapshot.get(p["uuid"], {}).get("quests", p["quests"])
+        diff = p["quests"] - prev
+        if diff > best_progress_count:
+            best_progress_count = diff
+            best_progress = p["name"]
+
+    if best_progress and best_progress_count > 0:
+        embed.add_field(
+            name="🏆 Meilleure progression",
+            value=f"**{best_progress}** — +{best_progress_count} tâches cette semaine !",
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="🏆 Meilleure progression",
+            value="Aucune progression cette semaine.",
+            inline=False
+        )
+
+    # Joueur le plus actif
+    most_active = None
+    most_active_hours = 0.0
+    for p in players:
+        prev = snapshot.get(p["uuid"], {}).get("playtime_hours", p["playtime_hours"])
+        diff = round(p["playtime_hours"] - prev, 1)
+        if diff > most_active_hours:
+            most_active_hours = diff
+            most_active = p["name"]
+
+    if most_active and most_active_hours > 0:
+        embed.add_field(
+            name="⏱️ Joueur le plus actif",
+            value=f"**{most_active}** — {most_active_hours}h de jeu cette semaine !",
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="⏱️ Joueur le plus actif",
+            value="Aucune activité cette semaine.",
+            inline=False
+        )
+
+    # Classement global actuel
+    sorted_players = sorted(players, key=lambda x: x["quests"], reverse=True)
+    medals = ["🥇", "🥈", "🥉"]
+    ranking_text = ""
+    for i, p in enumerate(sorted_players[:5]):
+        medal = medals[i] if i < 3 else f"`#{i+1}`"
+        ranking_text += f"{medal} **{p['name']}** — {p['quests']} tâches\n"
+
+    embed.add_field(
+        name="📊 Classement actuel",
+        value=ranking_text or "Aucun joueur",
+        inline=False
+    )
+
+    embed.set_footer(text="Récap posté automatiquement chaque dimanche soir")
+    return embed
+
+
+def save_snapshot(players: list[dict]):
+    """Sauvegarde le snapshot actuel pour comparaison la semaine suivante."""
+    global last_week_snapshot
+    last_week_snapshot = {
+        p["uuid"]: {
+            "quests":         p["quests"],
+            "playtime_hours": p["playtime_hours"],
+        }
+        for p in players
+    }
+
+
+@tasks.loop(minutes=60)
+async def check_weekly_recap():
+    """Vérifie chaque heure si c'est dimanche soir pour poster le récap."""
+    now = datetime.now()
+    # Dimanche = 6, entre 20h et 21h
+    if now.weekday() != 6 or now.hour != 20:
+        return
+
+    if not CHANNEL_RECAP:
+        print("[WARN] CHANNEL_RECAP non configuré.")
+        return
+
+    channel = client.get_channel(CHANNEL_RECAP)
+    if not channel:
+        print("[ERROR] Channel récap introuvable.")
+        return
+
+    print(f"[INFO] Publication du récap hebdomadaire...")
+
+    try:
+        players = fetch_all_players()
+    except Exception as e:
+        print(f"[ERROR] fetch récap : {e}")
+        return
+
+    embed = build_recap(players, last_week_snapshot)
+    await channel.send(embed=embed)
+    save_snapshot(players)
+    print("[OK] Récap hebdomadaire posté !")
