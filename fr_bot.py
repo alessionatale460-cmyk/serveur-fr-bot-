@@ -14,6 +14,8 @@ import os
 import re
 import ftplib
 import io
+import socket
+import struct
 from datetime import datetime
 
 import discord
