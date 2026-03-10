@@ -260,80 +260,6 @@ def build_dashboard(players: list[dict], online: int, maximum: int) -> discord.E
     return embed
 
 # ─────────────────────────────────────────
-#  BOT
-# ─────────────────────────────────────────
-
-intents  = discord.Intents.default()
-client   = discord.Client(intents=intents)
-msg_id   = None
-notified: dict[str, set] = {}
-
-
-@tasks.loop(minutes=UPDATE_INTERVAL_MINUTES)
-async def update_dashboard():
-    global msg_id
-
-    if not CHANNEL_DASHBOARD:
-        print("[ERROR] CHANNEL_DASHBOARD non configuré.")
-        return
-
-    channel = client.get_channel(CHANNEL_DASHBOARD)
-    if not channel:
-        print("[ERROR] Channel introuvable.")
-        return
-
-    print(f"[INFO] Mise à jour ({datetime.now().strftime('%H:%M:%S')})...")
-
-    try:
-        players = fetch_all_players()
-    except Exception as e:
-        print(f"[ERROR] fetch : {e}")
-        return
-
-    online, maximum = get_online_count()
-    embed = build_dashboard(players, online, maximum)
-
-    # Mettre à jour ou créer le message
-    if msg_id:
-        try:
-            msg = await channel.fetch_message(msg_id)
-            await msg.edit(embed=embed)
-            print(f"[OK] Dashboard mis à jour ({len(players)} joueurs).")
-        except discord.NotFound:
-            msg_id = None
-
-    if not msg_id:
-        msg = await channel.send(embed=embed)
-        msg_id = msg.id
-        await msg.pin()
-        print(f"[OK] Dashboard créé et épinglé (ID: {msg.id}).")
-
-    # Notifications de paliers
-    if CHANNEL_NOTIFS:
-        notif_channel = client.get_channel(CHANNEL_NOTIFS)
-        if notif_channel:
-            for p in players:
-                uuid = p["uuid"]
-                if uuid not in notified:
-                    notified[uuid] = set()
-                for threshold, message in CHAPTER_MILESTONES.items():
-                    if p["quests"] >= threshold and threshold not in notified[uuid]:
-                        notified[uuid].add(threshold)
-                        await notif_channel.send(message.format(name=p["name"]))
-
-
-@client.event
-async def on_ready():
-    print(f"[OK] Bot connecté : {client.user}")
-    update_dashboard.start()
-    check_weekly_recap.start()
-
-
-if __name__ == "__main__":
-    client.run(DISCORD_TOKEN)
-
-
-# ─────────────────────────────────────────
 #  RÉCAP HEBDOMADAIRE
 # ─────────────────────────────────────────
 
@@ -461,3 +387,76 @@ async def check_weekly_recap():
     await channel.send(embed=embed)
     save_snapshot(players)
     print("[OK] Récap hebdomadaire posté !")
+
+# ─────────────────────────────────────────
+#  BOT
+# ─────────────────────────────────────────
+
+intents  = discord.Intents.default()
+client   = discord.Client(intents=intents)
+msg_id   = None
+notified: dict[str, set] = {}
+
+
+@tasks.loop(minutes=UPDATE_INTERVAL_MINUTES)
+async def update_dashboard():
+    global msg_id
+
+    if not CHANNEL_DASHBOARD:
+        print("[ERROR] CHANNEL_DASHBOARD non configuré.")
+        return
+
+    channel = client.get_channel(CHANNEL_DASHBOARD)
+    if not channel:
+        print("[ERROR] Channel introuvable.")
+        return
+
+    print(f"[INFO] Mise à jour ({datetime.now().strftime('%H:%M:%S')})...")
+
+    try:
+        players = fetch_all_players()
+    except Exception as e:
+        print(f"[ERROR] fetch : {e}")
+        return
+
+    online, maximum = get_online_count()
+    embed = build_dashboard(players, online, maximum)
+
+    # Mettre à jour ou créer le message
+    if msg_id:
+        try:
+            msg = await channel.fetch_message(msg_id)
+            await msg.edit(embed=embed)
+            print(f"[OK] Dashboard mis à jour ({len(players)} joueurs).")
+        except discord.NotFound:
+            msg_id = None
+
+    if not msg_id:
+        msg = await channel.send(embed=embed)
+        msg_id = msg.id
+        await msg.pin()
+        print(f"[OK] Dashboard créé et épinglé (ID: {msg.id}).")
+
+    # Notifications de paliers
+    if CHANNEL_NOTIFS:
+        notif_channel = client.get_channel(CHANNEL_NOTIFS)
+        if notif_channel:
+            for p in players:
+                uuid = p["uuid"]
+                if uuid not in notified:
+                    notified[uuid] = set()
+                for threshold, message in CHAPTER_MILESTONES.items():
+                    if p["quests"] >= threshold and threshold not in notified[uuid]:
+                        notified[uuid].add(threshold)
+                        await notif_channel.send(message.format(name=p["name"]))
+
+
+@client.event
+async def on_ready():
+    print(f"[OK] Bot connecté : {client.user}")
+    update_dashboard.start()
+    check_weekly_recap.start()
+
+
+if __name__ == "__main__":
+    client.run(DISCORD_TOKEN)
