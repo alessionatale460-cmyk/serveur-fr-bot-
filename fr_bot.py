@@ -47,16 +47,11 @@ UPDATE_INTERVAL_MINUTES = 60
 
 # Paliers de notification
 CHAPTER_MILESTONES = {
-    50:  "⚙️ **{name}** a terminé ses premiers automatismes !
-┗ *50 tâches complétées — premier palier atteint !*",
-    100: "🔬 **{name}** maîtrise la technologie de base !
-┗ *100 tâches complétées — les choses sérieuses commencent !*",
-    200: "⚡ **{name}** entre dans le vif du sujet !
-┗ *200 tâches complétées — mi-chemin vers le sommet !*",
-    350: "🏆 **{name}** est dans le top tier du modpack !
-┗ *350 tâches complétées — plus grand chose à apprendre !*",
-    500: "🌟 **{name}** est une légende vivante !
-┗ *500 tâches complétées — respect absolu !*",
+    50:  "⚙️ **{name}** a terminé ses premiers automatismes !\n┗ *50 tâches complétées — premier palier atteint !*",
+    100: "🔬 **{name}** maîtrise la technologie de base !\n┗ *100 tâches complétées — les choses sérieuses commencent !*",
+    200: "⚡ **{name}** entre dans le vif du sujet !\n┗ *200 tâches complétées — mi-chemin vers le sommet !*",
+    350: "🏆 **{name}** est dans le top tier du modpack !\n┗ *350 tâches complétées — plus grand chose à apprendre !*",
+    500: "🌟 **{name}** est une légende vivante !\n┗ *500 tâches complétées — respect absolu !*",
 }
 
 # ─────────────────────────────────────────
