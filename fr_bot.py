@@ -313,6 +313,8 @@ CHANNEL_RECAP = int(os.environ.get("CHANNEL_RECAP", "0"))
 CHANNEL_RANKS   = 1480899926803222742
 CHANNEL_WELCOME = 1480817206517432380
 CHANNEL_INFO    = 1480819351564193883
+CHANNEL_RULES   = 1480912390815088730
+ROLE_JOUEUR     = 1480908896141840434
 
 # Snapshot de la semaine précédente { uuid: {quests, playtime_hours} }
 last_week_snapshot: dict[str, dict] = {}
@@ -666,6 +668,22 @@ async def check_ranks():
             print(f"[RANK] {p['name']} → {rank['rank']} ({p['playtime_hours']}h)")
 
 
+class RulesView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label="✅ J'accepte les règles", style=discord.ButtonStyle.success, custom_id="accept_rules")
+    async def accept_rules(self, interaction: discord.Interaction, button: discord.ui.Button):
+        role = interaction.guild.get_role(ROLE_JOUEUR)
+        if role in interaction.user.roles:
+            await interaction.response.send_message("Tu as déjà accepté les règles !", ephemeral=True)
+            return
+        if role:
+            await interaction.user.add_roles(role)
+            await interaction.response.send_message("✅ Règles acceptées ! Bienvenue sur **Entre Copains** 🎮", ephemeral=True)
+            print(f"[OK] Rôle Joueur attribué à {interaction.user.display_name}")
+
+
 @client.event
 async def on_member_join(member):
     channel = client.get_channel(CHANNEL_WELCOME)
@@ -689,11 +707,7 @@ async def on_member_join(member):
     embed.set_footer(text="Entre copains, on va plus loin.")
     await channel.send(embed=embed)
 
-    # Attribuer le rôle Joueur automatiquement
-    role = member.guild.get_role(1480908896141840434)
-    if role:
-        await member.add_roles(role)
-        print(f"[OK] Rôle Joueur attribué à {member.display_name}")
+    # Le rôle Joueur est attribué après acceptation des règles
 
 
 @client.event
@@ -767,6 +781,50 @@ async def on_ready():
             msg = await info_channel.send(embed=info_embed)
             await msg.pin()
         print("[OK] Channel #info-serveur mis à jour.")
+
+    # Enregistrer la vue persistante pour le bouton règles
+    client.add_view(RulesView())
+
+    # Poster/mettre à jour l'embed des règles
+    rules_channel = client.get_channel(CHANNEL_RULES)
+    if rules_channel:
+        rules_embed = discord.Embed(
+            title="📋 Règles du serveur",
+            description="Bienvenue sur **Entre Copains** !\nMerci de lire et accepter les règles avant de rejoindre.",
+            color=0x9B59B6,
+        )
+        rules_embed.add_field(
+            name="1️⃣ Respect",
+            value="Respecte tous les membres du serveur. Aucune insulte, discrimination ou harcèlement toléré.",
+            inline=False
+        )
+        rules_embed.add_field(
+            name="2️⃣ Pas de griefing",
+            value="Ne détruis pas, ne voles pas et ne modifie pas les constructions des autres sans permission.",
+            inline=False
+        )
+        rules_embed.add_field(
+            name="3️⃣ Pas de triche",
+            value="Aucun mod non autorisé, exploit ou triche. Joue fair-play.",
+            inline=False
+        )
+        rules_embed.add_field(
+            name="4️⃣ Entraide",
+            value="Le partage et l'entraide sont encouragés. On est là pour jouer ensemble !",
+            inline=False
+        )
+        rules_embed.set_footer(text="En cliquant sur le bouton, tu acceptes ces règles.")
+
+        found = False
+        async for msg in rules_channel.history(limit=10):
+            if msg.author == client.user:
+                await msg.edit(embed=rules_embed, view=RulesView())
+                found = True
+                break
+        if not found:
+            msg = await rules_channel.send(embed=rules_embed, view=RulesView())
+            await msg.pin()
+        print("[OK] Channel #règles mis à jour.")
 
 
 if __name__ == "__main__":
