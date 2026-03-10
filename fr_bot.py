@@ -591,6 +591,49 @@ async def on_message(message):
         await message.channel.send(embed=embed)
 
 
+
+
+def rcon_send(command: str) -> str:
+    """Envoie une commande RCON au serveur Minecraft."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        sock.connect((RCON_HOST, RCON_PORT))
+
+        def send_packet(req_id, req_type, payload):
+            payload_bytes = payload.encode("utf-8") + b"\x00\x00"
+            length = 4 + 4 + len(payload_bytes)
+            packet = struct.pack("<iii", length, req_id, req_type) + payload_bytes
+            sock.sendall(packet)
+
+        def recv_packet():
+            raw = b""
+            while len(raw) < 4:
+                raw += sock.recv(4096)
+            length = struct.unpack("<i", raw[:4])[0]
+            while len(raw) < 4 + length:
+                raw += sock.recv(4096)
+            req_id, req_type = struct.unpack("<ii", raw[4:12])
+            payload = raw[12:4 + length - 2].decode("utf-8", errors="ignore")
+            return req_id, req_type, payload
+
+        send_packet(1, 3, RCON_PASSWORD)
+        recv_packet()
+        send_packet(2, 2, command)
+        _, _, response = recv_packet()
+        sock.close()
+        return response
+    except Exception as e:
+        print(f"[RCON ERROR] {e}")
+        return ""
+
+
+def apply_rank(player_name: str, rank: dict):
+    """Applique le rang FTB Ranks au joueur via RCON."""
+    rcon_send(f"ftbranks set {player_name} {rank['rank']}")
+    print(f"[RCON] Rang '{rank['rank']}' appliqué à {player_name}")
+
+
 # Suivi des rangs déjà attribués { uuid: rank_name }
 player_ranks: dict[str, str] = {}
 
@@ -672,46 +715,31 @@ import struct
 
 
 
-def rcon_send(command: str) -> str:
-    """Envoie une commande RCON au serveur Minecraft."""
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
-        sock.connect((RCON_HOST, RCON_PORT))
 
-        def send_packet(req_id, req_type, payload):
-            payload_bytes = payload.encode("utf-8") + b"\x00\x00"
-            length = 4 + 4 + len(payload_bytes)
-            packet = struct.pack("<iii", length, req_id, req_type) + payload_bytes
-            sock.sendall(packet)
-
-        def recv_packet():
-            raw = b""
-            while len(raw) < 4:
-                raw += sock.recv(4096)
-            length = struct.unpack("<i", raw[:4])[0]
-            while len(raw) < 4 + length:
-                raw += sock.recv(4096)
-            req_id, req_type = struct.unpack("<ii", raw[4:12])
-            payload = raw[12:4 + length - 2].decode("utf-8", errors="ignore")
-            return req_id, req_type, payload
-
-        # Auth
-        send_packet(1, 3, RCON_PASSWORD)
-        recv_packet()
-
-        # Command
-        send_packet(2, 2, command)
-        _, _, response = recv_packet()
-        sock.close()
-        return response
-    except Exception as e:
-        print(f"[RCON ERROR] {e}")
-        return ""
+if __name__ == "__main__":
+    client.run(DISCORD_TOKEN)
 
 
-def apply_rank(player_name: str, rank: dict):
-    """Applique le rang FTB Ranks + homes au joueur via RCON."""
-    # Attribuer le rang FTB Ranks
-    rcon_send(f"ftbranks set {player_name} {rank['rank']}")
-    print(f"[RCON] Rang '{rank['rank']}' appliqué à {player_name}")
+
+
+# ─────────────────────────────────────────
+#  RCON
+# ─────────────────────────────────────────
+
+import socket
+import struct
+
+
+
+if __name__ == "__main__":
+    client.run(DISCORD_TOKEN)
+
+
+
+
+# ─────────────────────────────────────────
+#  RCON
+# ─────────────────────────────────────────
+
+import socket
+import struct
