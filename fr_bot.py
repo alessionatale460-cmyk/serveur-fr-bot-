@@ -310,7 +310,9 @@ def build_dashboard(players: list[dict], online: int, maximum: int) -> discord.E
 
 # Channel pour le récap hebdomadaire
 CHANNEL_RECAP = int(os.environ.get("CHANNEL_RECAP", "0"))
-CHANNEL_RANKS = 1480899926803222742
+CHANNEL_RANKS   = 1480899926803222742
+CHANNEL_WELCOME = 1480817206517432380
+CHANNEL_INFO    = 1480819351564193883
 
 # Snapshot de la semaine précédente { uuid: {quests, playtime_hours} }
 last_week_snapshot: dict[str, dict] = {}
@@ -443,6 +445,7 @@ async def check_weekly_recap():
 
 intents  = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 client   = discord.Client(intents=intents)
 tree     = discord.app_commands.CommandTree(client)
 msg_id   = None
@@ -664,6 +667,36 @@ async def check_ranks():
 
 
 @client.event
+async def on_member_join(member):
+    channel = client.get_channel(CHANNEL_WELCOME)
+    if not channel:
+        return
+    desc = (
+        f"Content de te voir parmi nous sur **Entre Copains** !\n\n"
+        f"On joue ensemble sur **All The Mods 10**, un modpack bourré de contenu.\n"
+        f"Que tu sois débutant ou vétéran, t'as ta place ici. 🎮\n\n"
+        f"• Consulte <#1480817482519285781> pour voir le chat en jeu\n"
+        f"• Consulte <#1480899926803222742> pour les rangs et avantages\n"
+        f"• Tape `/rang` dans <#1480899926803222742> pour voir ta progression\n\n"
+        f"Bonne aventure ! ⛏️"
+    )
+    embed = discord.Embed(
+        title=f"👋 Bienvenue {member.display_name} !",
+        description=desc,
+        color=0x9B59B6,
+    )
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.set_footer(text="Entre copains, on va plus loin.")
+    await channel.send(embed=embed)
+
+    # Attribuer le rôle Joueur automatiquement
+    role = member.guild.get_role(1480908896141840434)
+    if role:
+        await member.add_roles(role)
+        print(f"[OK] Rôle Joueur attribué à {member.display_name}")
+
+
+@client.event
 async def on_ready():
     print(f"[OK] Bot connecté : {client.user}")
     guild = discord.Object(id=1480817204751634522)
@@ -688,6 +721,52 @@ async def on_ready():
         if not found:
             await channel.send(embed=embed)
         print("[OK] Channel #rangs mis à jour.")
+
+    # Poster/mettre à jour le message #info-serveur
+    info_channel = client.get_channel(CHANNEL_INFO)
+    if info_channel:
+        info_embed = discord.Embed(
+            title="🎮 Entre Copains — Infos Serveur",
+            description="Bienvenue sur le serveur Minecraft FR **Entre Copains** !",
+            color=0x9B59B6,
+        )
+        info_embed.add_field(
+            name="📦 Modpack",
+            value="**All The Mods 10** (ATM10)\n[Télécharger sur CurseForge](https://www.curseforge.com/minecraft/modpacks/all-the-mods-10)",
+            inline=False
+        )
+        info_embed.add_field(
+            name="🔌 IP du serveur",
+            value="`lannister.dathost.net:17161`",
+            inline=False
+        )
+        info_embed.add_field(
+            name="🏅 Système de rangs",
+            value=f"Des avantages débloqués automatiquement selon ton temps de jeu !\nConsulte <#{CHANNEL_RANKS}> pour tous les détails.",
+            inline=False
+        )
+        info_embed.add_field(
+            name="💬 Chat lié",
+            value=f"Le chat in-game est synchronisé avec <#1480817482519285781> en temps réel.",
+            inline=False
+        )
+        info_embed.add_field(
+            name="📊 Tableau de bord",
+            value=f"Suis ta progression et celle des autres dans <#{CHANNEL_DASHBOARD}>.",
+            inline=False
+        )
+        info_embed.set_footer(text="Entre copains, on va plus loin.")
+
+        found = False
+        async for msg in info_channel.history(limit=10):
+            if msg.author == client.user:
+                await msg.edit(embed=info_embed)
+                found = True
+                break
+        if not found:
+            msg = await info_channel.send(embed=info_embed)
+            await msg.pin()
+        print("[OK] Channel #info-serveur mis à jour.")
 
 
 if __name__ == "__main__":
