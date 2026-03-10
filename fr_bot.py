@@ -433,13 +433,12 @@ def save_snapshot(players: list[dict]):
     }
 
 
-@tasks.loop(minutes=60)
+@tasks.loop(minutes=2)
 async def check_weekly_recap():
-    """Vérifie chaque heure si c'est dimanche soir pour poster le récap."""
+    """MODE TEST — se déclenche toutes les 2 minutes."""
     now = datetime.now()
-    # Dimanche = 6, entre 20h et 21h
-    if now.weekday() != 6 or now.hour != 20:
-        return
+    # Pas de filtre jour/heure en mode test
+    _ = now
 
     if not CHANNEL_RECAP:
         print("[WARN] CHANNEL_RECAP non configuré.")
