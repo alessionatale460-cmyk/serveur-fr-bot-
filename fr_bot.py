@@ -113,11 +113,16 @@ def parse_stats(content: str) -> dict:
             get("minecraft:custom", "minecraft:sprint_one_cm") +
             get("minecraft:custom", "minecraft:fly_one_cm")
         )
+        items_crafted = sum(stats.get("minecraft:crafted", {}).values())
+        mobs_killed   = sum(stats.get("minecraft:killed", {}).values())
+
         return {
             "playtime_hours": round(play_ticks / 72000, 1),
             "deaths":         deaths,
             "blocks_mined":   blocks_mined,
             "distance_km":    round(distance_cm / 100000, 1),
+            "items_crafted":  items_crafted,
+            "mobs_killed":    mobs_killed,
         }
     except Exception:
         return {"playtime_hours": 0, "deaths": 0, "blocks_mined": 0, "distance_km": 0}
@@ -147,6 +152,8 @@ def fetch_all_players() -> list[dict]:
                     "deaths":         0,
                     "blocks_mined":   0,
                     "distance_km":    0,
+                    "items_crafted":  0,
+                    "mobs_killed":    0,
                 }
             except Exception as e:
                 print(f"[WARN] quests/{filename} : {e}")
@@ -167,7 +174,7 @@ def fetch_all_players() -> list[dict]:
                     players[uuid].update(s)
                 else:
                     players[uuid] = {"uuid": uuid, "name": uuid[:12] + "...",
-                                     "quests": 0, **s}
+                                     "quests": 0, "items_crafted": 0, "mobs_killed": 0, **s}
             except Exception as e:
                 print(f"[WARN] stats/{filename} : {e}")
     except Exception as e:
@@ -256,7 +263,9 @@ def build_dashboard(players: list[dict], online: int, maximum: int) -> discord.E
             f"**{p['name']}** — "
             f"💀 {p['deaths']} morts · "
             f"⛏️ {p['blocks_mined']:,} blocs · "
-            f"🚶 {p['distance_km']} km\n"
+            f"🚶 {p['distance_km']} km · "
+            f"⚗️ {p['items_crafted']:,} crafts · "
+            f"🐾 {p['mobs_killed']:,} mobs\n"
         )
     embed.add_field(
         name="📊 Statistiques",
