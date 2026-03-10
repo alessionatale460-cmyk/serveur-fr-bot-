@@ -62,6 +62,27 @@ CHAPTER_MILESTONES = {
     4038: "🏅 **{name}** a terminé le modpack en entier !\n┗ *4038 tâches complétées — MODPACK 100% !* 🎉",
 }
 
+
+# Paliers de rangs par heures de jeu
+RANK_MILESTONES = [
+    {"hours": 0,  "rank": "nouveau",      "prefix": "&7[Nouveau]",     "chunks": 1,  "homes": 1},
+    {"hours": 2,  "rank": "joueur",       "prefix": "&a[Joueur]",      "chunks": 5,  "homes": 2},
+    {"hours": 5,  "rank": "habitue",      "prefix": "&9[Habitué]",     "chunks": 10, "homes": 3},
+    {"hours": 10, "rank": "experimente",  "prefix": "&5[Expérimenté]", "chunks": 15, "homes": 4},
+    {"hours": 20, "rank": "veteran",      "prefix": "&6[Vétéran]",     "chunks": 20, "homes": 6},
+    {"hours": 40, "rank": "expert",       "prefix": "&c[Expert]",      "chunks": 30, "homes": 10},
+    {"hours": 60, "rank": "legende",      "prefix": "&4[Légende]",     "chunks": 40, "homes": -1},
+]
+
+def get_rank_for_hours(hours: float) -> dict:
+    """Retourne le rang correspondant aux heures de jeu."""
+    current = RANK_MILESTONES[0]
+    for milestone in RANK_MILESTONES:
+        if hours >= milestone["hours"]:
+            current = milestone
+    return current
+
+
 # ─────────────────────────────────────────
 #  FTP
 # ─────────────────────────────────────────
@@ -407,6 +428,8 @@ async def check_weekly_recap():
     save_snapshot(players)
     print("[OK] Récap hebdomadaire posté !")
 
+
+
 # ─────────────────────────────────────────
 #  BOT
 # ─────────────────────────────────────────
@@ -596,6 +619,18 @@ if __name__ == "__main__":
 
 
 
+if __name__ == "__main__":
+    client.run(DISCORD_TOKEN)
+
+
+
+
+if __name__ == "__main__":
+    client.run(DISCORD_TOKEN)
+
+
+
+
 # ─────────────────────────────────────────
 #  RCON
 # ─────────────────────────────────────────
@@ -606,26 +641,6 @@ import struct
 RCON_HOST     = os.environ.get("RCON_HOST", "")
 RCON_PORT     = int(os.environ.get("RCON_PORT", "25575"))
 RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "")
-
-# Paliers de rangs par heures de jeu
-RANK_MILESTONES = [
-    {"hours": 0,  "rank": "nouveau",      "prefix": "&7[Nouveau]",     "chunks": 1,  "homes": 1},
-    {"hours": 2,  "rank": "joueur",       "prefix": "&a[Joueur]",      "chunks": 5,  "homes": 2},
-    {"hours": 5,  "rank": "habitue",      "prefix": "&9[Habitué]",     "chunks": 10, "homes": 3},
-    {"hours": 10, "rank": "experimente",  "prefix": "&5[Expérimenté]", "chunks": 15, "homes": 4},
-    {"hours": 20, "rank": "veteran",      "prefix": "&6[Vétéran]",     "chunks": 20, "homes": 6},
-    {"hours": 40, "rank": "expert",       "prefix": "&c[Expert]",      "chunks": 30, "homes": 10},
-    {"hours": 60, "rank": "legende",      "prefix": "&4[Légende]",     "chunks": 40, "homes": -1},
-]
-
-def get_rank_for_hours(hours: float) -> dict:
-    """Retourne le rang correspondant aux heures de jeu."""
-    current = RANK_MILESTONES[0]
-    for milestone in RANK_MILESTONES:
-        if hours >= milestone["hours"]:
-            current = milestone
-    return current
-
 
 def rcon_send(command: str) -> str:
     """Envoie une commande RCON au serveur Minecraft."""
