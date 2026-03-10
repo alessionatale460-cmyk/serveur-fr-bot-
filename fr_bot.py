@@ -33,6 +33,11 @@ STATS_PATH     = "/world/stats/"
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN_FR", "TON_TOKEN")
 
+# RCON
+RCON_HOST     = os.environ.get("RCON_HOST", "")
+RCON_PORT     = int(os.environ.get("RCON_PORT", "25575"))
+RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "")
+
 # Un seul channel pour tout afficher
 CHANNEL_DASHBOARD = int(os.environ.get("CHANNEL_DASHBOARD", "0"))
 
@@ -665,9 +670,7 @@ if __name__ == "__main__":
 import socket
 import struct
 
-RCON_HOST     = os.environ.get("RCON_HOST", "")
-RCON_PORT     = int(os.environ.get("RCON_PORT", "25575"))
-RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "")
+
 
 def rcon_send(command: str) -> str:
     """Envoie une commande RCON au serveur Minecraft."""
