@@ -47,11 +47,19 @@ UPDATE_INTERVAL_MINUTES = 60
 
 # Paliers de notification
 CHAPTER_MILESTONES = {
-    50:  "⚙️ **{name}** a terminé ses premiers automatismes !\n┗ *50 tâches complétées — premier palier atteint !*",
-    100: "🔬 **{name}** maîtrise la technologie de base !\n┗ *100 tâches complétées — les choses sérieuses commencent !*",
-    200: "⚡ **{name}** entre dans le vif du sujet !\n┗ *200 tâches complétées — mi-chemin vers le sommet !*",
-    350: "🏆 **{name}** est dans le top tier du modpack !\n┗ *350 tâches complétées — plus grand chose à apprendre !*",
-    500: "🌟 **{name}** est une légende vivante !\n┗ *500 tâches complétées — respect absolu !*",
+    50:   "⚙️ **{name}** a terminé ses premiers automatismes !\n┗ *50 tâches complétées — premier palier atteint !*",
+    100:  "🔬 **{name}** maîtrise la technologie de base !\n┗ *100 tâches complétées — les choses sérieuses commencent !*",
+    200:  "⚡ **{name}** entre dans le vif du sujet !\n┗ *200 tâches complétées — mi-chemin vers le sommet !*",
+    350:  "🏆 **{name}** est dans le top tier du modpack !\n┗ *350 tâches complétées — plus grand chose à apprendre !*",
+    500:  "🌟 **{name}** est une légende vivante !\n┗ *500 tâches complétées — respect absolu !*",
+    750:  "🔥 **{name}** fait partie de l'élite !\n┗ *750 tâches complétées — peu de joueurs arrivent jusque là !*",
+    1000: "💎 **{name}** a complété un quart du modpack !\n┗ *1000 tâches complétées — impressionnant !*",
+    1500: "🚀 **{name}** a complété un tiers du modpack !\n┗ *1500 tâches complétées — inarrêtable !*",
+    2000: "⚔️ **{name}** est à mi-chemin du modpack !\n┗ *2000 tâches complétées — halfway there !*",
+    2500: "🌍 **{name}** a passé la moitié du modpack !\n┗ *2500 tâches complétées — plus que la descente !*",
+    3000: "🎯 **{name}** est en ligne droite finale !\n┗ *3000 tâches complétées — le finish se rapproche !*",
+    3500: "👑 **{name}** est presque au bout !\n┗ *3500 tâches complétées — plus que 538 tâches !*",
+    4038: "🏅 **{name}** a terminé le modpack en entier !\n┗ *4038 tâches complétées — MODPACK 100% !* 🎉",
 }
 
 # ─────────────────────────────────────────
