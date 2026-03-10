@@ -586,6 +586,33 @@ async def on_message(message):
         await message.channel.send(embed=embed)
 
 
+# Suivi des rangs déjà attribués { uuid: rank_name }
+player_ranks: dict[str, str] = {}
+
+
+@tasks.loop(minutes=30)
+async def check_ranks():
+    """Vérifie toutes les 30 min si des joueurs ont changé de rang."""
+    if not RCON_HOST or not RCON_PASSWORD:
+        print("[WARN] RCON non configuré, vérification des rangs ignorée.")
+        return
+
+    print("[INFO] Vérification des rangs...")
+    try:
+        players = fetch_all_players()
+    except Exception as e:
+        print(f"[ERROR] fetch rangs : {e}")
+        return
+
+    for p in players:
+        rank = get_rank_for_hours(p["playtime_hours"])
+        current = player_ranks.get(p["uuid"])
+        if current != rank["rank"]:
+            apply_rank(p["name"], rank)
+            player_ranks[p["uuid"]] = rank["rank"]
+            print(f"[RANK] {p['name']} → {rank['rank']} ({p['playtime_hours']}h)")
+
+
 @client.event
 async def on_ready():
     print(f"[OK] Bot connecté : {client.user}")
@@ -685,30 +712,3 @@ def apply_rank(player_name: str, rank: dict):
     # Attribuer le rang FTB Ranks
     rcon_send(f"ftbranks set {player_name} {rank['rank']}")
     print(f"[RCON] Rang '{rank['rank']}' appliqué à {player_name}")
-
-
-# Suivi des rangs déjà attribués { uuid: rank_name }
-player_ranks: dict[str, str] = {}
-
-
-@tasks.loop(minutes=30)
-async def check_ranks():
-    """Vérifie toutes les 30 min si des joueurs ont changé de rang."""
-    if not RCON_HOST or not RCON_PASSWORD:
-        print("[WARN] RCON non configuré, vérification des rangs ignorée.")
-        return
-
-    print("[INFO] Vérification des rangs...")
-    try:
-        players = fetch_all_players()
-    except Exception as e:
-        print(f"[ERROR] fetch rangs : {e}")
-        return
-
-    for p in players:
-        rank = get_rank_for_hours(p["playtime_hours"])
-        current = player_ranks.get(p["uuid"])
-        if current != rank["rank"]:
-            apply_rank(p["name"], rank)
-            player_ranks[p["uuid"]] = rank["rank"]
-            print(f"[RANK] {p['name']} → {rank['rank']} ({p['playtime_hours']}h)")
