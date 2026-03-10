@@ -566,8 +566,10 @@ async def on_message(message):
 @client.event
 async def on_ready():
     print(f"[OK] Bot connecté : {client.user}")
-    await tree.sync()
-    print("[OK] Slash commands synchronisées.")
+    guild = discord.Object(id=1480817204751634522)
+    tree.copy_global_to(guild=guild)
+    await tree.sync(guild=guild)
+    print("[OK] Slash commands synchronisées sur le serveur.")
     update_dashboard.start()
     check_weekly_recap.start()
     check_ranks.start()
