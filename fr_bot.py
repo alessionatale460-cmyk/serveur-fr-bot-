@@ -568,7 +568,6 @@ async def on_ready():
             value="`lannister.dathost.net:17161`",
             inline=False
         )
-        info_
         info_embed.add_field(
             name="💬 Chat lié",
             value=f"Le chat in-game est synchronisé avec <#1480817482519285781> en temps réel.",
