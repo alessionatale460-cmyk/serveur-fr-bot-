@@ -35,10 +35,6 @@ STATS_PATH     = "/world/stats/"
 
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN_FR", "TON_TOKEN")
 
-# RCON
-RCON_HOST     = os.environ.get("RCON_HOST", "")
-RCON_PORT     = int(os.environ.get("RCON_PORT", "25575"))
-RCON_PASSWORD = os.environ.get("RCON_PASSWORD", "")
 
 # Un seul channel pour tout afficher
 CHANNEL_DASHBOARD = int(os.environ.get("CHANNEL_DASHBOARD", "0"))
@@ -70,24 +66,6 @@ CHAPTER_MILESTONES = {
 }
 
 
-# Paliers de rangs par heures de jeu
-RANK_MILESTONES = [
-    {"hours": 0,  "rank": "nouveau",      "prefix": "&7[Nouveau]",     "chunks": 1,  "homes": 1},
-    {"hours": 2,  "rank": "joueur",       "prefix": "&a[Joueur]",      "chunks": 5,  "homes": 2},
-    {"hours": 5,  "rank": "habitue",      "prefix": "&9[Habitué]",     "chunks": 10, "homes": 3},
-    {"hours": 10, "rank": "experimente",  "prefix": "&5[Expérimenté]", "chunks": 15, "homes": 4},
-    {"hours": 20, "rank": "veteran",      "prefix": "&6[Vétéran]",     "chunks": 20, "homes": 6},
-    {"hours": 40, "rank": "expert",       "prefix": "&c[Expert]",      "chunks": 30, "homes": 10},
-    {"hours": 60, "rank": "legende",      "prefix": "&4[Légende]",     "chunks": 40, "homes": -1},
-]
-
-def get_rank_for_hours(hours: float) -> dict:
-    """Retourne le rang correspondant aux heures de jeu."""
-    current = RANK_MILESTONES[0]
-    for milestone in RANK_MILESTONES:
-        if hours >= milestone["hours"]:
-            current = milestone
-    return current
 
 
 # ─────────────────────────────────────────
@@ -310,7 +288,6 @@ def build_dashboard(players: list[dict], online: int, maximum: int) -> discord.E
 
 # Channel pour le récap hebdomadaire
 CHANNEL_RECAP = int(os.environ.get("CHANNEL_RECAP", "0"))
-CHANNEL_RANKS   = 1480899926803222742
 CHANNEL_WELCOME = 1480817206517432380
 CHANNEL_INFO    = 1480819351564193883
 CHANNEL_RULES   = 1480912390815088730
@@ -507,165 +484,19 @@ async def update_dashboard():
                         await notif_channel.send(message.format(name=p["name"]))
 
 
-def build_ranks_embed() -> discord.Embed:
-    """Construit l'embed d'info sur les rangs."""
-    embed = discord.Embed(
-        title="🏅 Système de Rangs",
-        description="Plus tu joues, plus tu débloques d'avantages !\nLes rangs sont attribués automatiquement selon ton temps de jeu.",
-        color=0x9B59B6,
-    )
-    for m in RANK_MILESTONES:
-        homes = "∞" if m["homes"] == -1 else str(m["homes"])
-        embed.add_field(
-            name=f"{m['prefix'].replace('&7','').replace('&a','').replace('&9','').replace('&5','').replace('&6','').replace('&c','').replace('&4','')}  —  {m['hours']}h",
-            value=f"⛏️ {m['chunks']} chunks · 🏠 {homes} homes",
-            inline=False
-        )
-    embed.set_footer(text="Les rangs sont vérifiés toutes les 30 minutes")
-    return embed
-
-
-@client.event
-async def on_message(message):
-    if message.author.bot:
-        return
-
-    if message.content.startswith("!rang"):
-        # Récupère le pseudo Minecraft depuis l'argument ou le nom Discord
-        parts = message.content.split()
-        if len(parts) > 1:
-            target_name = parts[1]
-        else:
-            target_name = message.author.display_name
-
-        try:
-            players = fetch_all_players()
-        except Exception as e:
-            await message.channel.send(f"❌ Erreur lors de la récupération des données : {e}")
-            return
-
-        # Cherche le joueur
-        player = next((p for p in players if p["name"].lower() == target_name.lower()), None)
-
-        if not player:
-            await message.channel.send(
-                f"❌ Joueur **{target_name}** introuvable. Utilise `!rang <pseudo_minecraft>`"
-            )
-            return
-
-        hours = player["playtime_hours"]
-        current_rank = get_rank_for_hours(hours)
-        prefix_clean = current_rank["prefix"].replace("&7","").replace("&a","").replace("&9","").replace("&5","").replace("&6","").replace("&c","").replace("&4","")
-
-        # Prochain rang
-        next_rank = None
-        for m in RANK_MILESTONES:
-            if m["hours"] > hours:
-                next_rank = m
-                break
-
-        embed = discord.Embed(
-            title=f"🎮 Progression de {player['name']}",
-            color=0x9B59B6,
-        )
-        embed.add_field(name="Rang actuel", value=prefix_clean, inline=True)
-        embed.add_field(name="Temps de jeu", value=f"{hours}h", inline=True)
-        embed.add_field(name="Quêtes", value=f"{player['quests']} tâches", inline=True)
-
-        if next_rank:
-            hours_left = round(next_rank["hours"] - hours, 1)
-            next_prefix = next_rank["prefix"].replace("&7","").replace("&a","").replace("&9","").replace("&5","").replace("&6","").replace("&c","").replace("&4","")
-            homes_next = "∞" if next_rank["homes"] == -1 else str(next_rank["homes"])
-            embed.add_field(
-                name="⏭️ Prochain rang",
-                value=f"{next_prefix} dans **{hours_left}h**\n⛏️ {next_rank['chunks']} chunks · 🏠 {homes_next} homes",
-                inline=False
-            )
-
-            # Barre de progression
-            total = next_rank["hours"] - current_rank["hours"]
-            done = hours - current_rank["hours"]
-            pct = min(int((done / total) * 20), 20) if total > 0 else 20
-            bar = "█" * pct + "░" * (20 - pct)
-            embed.add_field(
-                name="Progression",
-                value=f"`{bar}` {round((done/total)*100 if total > 0 else 100)}%",
-                inline=False
-            )
-        else:
-            embed.add_field(name="⭐ Rang maximum atteint !", value="Tu as débloqué tous les avantages.", inline=False)
-
-        await message.channel.send(embed=embed)
 
 
 
 
-def rcon_send(command: str) -> str:
-    """Envoie une commande RCON au serveur Minecraft."""
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
-        sock.connect((RCON_HOST, RCON_PORT))
-
-        def send_packet(req_id, req_type, payload):
-            payload_bytes = payload.encode("utf-8") + b"\x00\x00"
-            length = 4 + 4 + len(payload_bytes)
-            packet = struct.pack("<iii", length, req_id, req_type) + payload_bytes
-            sock.sendall(packet)
-
-        def recv_packet():
-            raw = b""
-            while len(raw) < 4:
-                raw += sock.recv(4096)
-            length = struct.unpack("<i", raw[:4])[0]
-            while len(raw) < 4 + length:
-                raw += sock.recv(4096)
-            req_id, req_type = struct.unpack("<ii", raw[4:12])
-            payload = raw[12:4 + length - 2].decode("utf-8", errors="ignore")
-            return req_id, req_type, payload
-
-        send_packet(1, 3, RCON_PASSWORD)
-        recv_packet()
-        send_packet(2, 2, command)
-        _, _, response = recv_packet()
-        sock.close()
-        return response
-    except Exception as e:
-        print(f"[RCON ERROR] {e}")
-        return ""
 
 
-def apply_rank(player_name: str, rank: dict):
-    """Applique le rang FTB Ranks au joueur via RCON."""
-    rcon_send(f"ftbranks set {player_name} {rank['rank']}")
-    print(f"[RCON] Rang '{rank['rank']}' appliqué à {player_name}")
 
 
-# Suivi des rangs déjà attribués { uuid: rank_name }
-player_ranks: dict[str, str] = {}
 
 
-@tasks.loop(minutes=30)
-async def check_ranks():
-    """Vérifie toutes les 30 min si des joueurs ont changé de rang."""
-    if not RCON_HOST or not RCON_PASSWORD:
-        print("[WARN] RCON non configuré, vérification des rangs ignorée.")
-        return
 
-    print("[INFO] Vérification des rangs...")
-    try:
-        players = fetch_all_players()
-    except Exception as e:
-        print(f"[ERROR] fetch rangs : {e}")
-        return
 
-    for p in players:
-        rank = get_rank_for_hours(p["playtime_hours"])
-        current = player_ranks.get(p["uuid"])
-        if current != rank["rank"]:
-            apply_rank(p["name"], rank)
-            player_ranks[p["uuid"]] = rank["rank"]
-            print(f"[RANK] {p['name']} → {rank['rank']} ({p['playtime_hours']}h)")
+
 
 
 class RulesView(discord.ui.View):
@@ -694,8 +525,6 @@ async def on_member_join(member):
         f"On joue ensemble sur **All The Mods 10**, un modpack bourré de contenu.\n"
         f"Que tu sois débutant ou vétéran, t'as ta place ici. 🎮\n\n"
         f"• Consulte <#1480817482519285781> pour voir le chat en jeu\n"
-        f"• Consulte <#1480899926803222742> pour les rangs et avantages\n"
-        f"• Tape `/rang` dans <#1480899926803222742> pour voir ta progression\n\n"
         f"Bonne aventure ! ⛏️"
     )
     embed = discord.Embed(
@@ -719,22 +548,7 @@ async def on_ready():
     print("[OK] Slash commands synchronisées sur le serveur.")
     update_dashboard.start()
     check_weekly_recap.start()
-    check_ranks.start()
 
-    # Poster/mettre à jour le message d'info rangs
-    channel = client.get_channel(CHANNEL_RANKS)
-    if channel:
-        embed = build_ranks_embed()
-        # Cherche un message existant du bot à mettre à jour
-        found = False
-        async for msg in channel.history(limit=10):
-            if msg.author == client.user:
-                await msg.edit(embed=embed)
-                found = True
-                break
-        if not found:
-            await channel.send(embed=embed)
-        print("[OK] Channel #rangs mis à jour.")
 
     # Poster/mettre à jour le message #info-serveur
     info_channel = client.get_channel(CHANNEL_INFO)
@@ -754,11 +568,7 @@ async def on_ready():
             value="`lannister.dathost.net:17161`",
             inline=False
         )
-        info_embed.add_field(
-            name="🏅 Système de rangs",
-            value=f"Des avantages débloqués automatiquement selon ton temps de jeu !\nConsulte <#{CHANNEL_RANKS}> pour tous les détails.",
-            inline=False
-        )
+        info_
         info_embed.add_field(
             name="💬 Chat lié",
             value=f"Le chat in-game est synchronisé avec <#1480817482519285781> en temps réel.",
@@ -846,7 +656,6 @@ if __name__ == "__main__":
 
 
 # ─────────────────────────────────────────
-#  RCON
 # ─────────────────────────────────────────
 
 import socket
@@ -862,7 +671,6 @@ if __name__ == "__main__":
 
 
 # ─────────────────────────────────────────
-#  RCON
 # ─────────────────────────────────────────
 
 import socket
@@ -877,7 +685,6 @@ if __name__ == "__main__":
 
 
 # ─────────────────────────────────────────
-#  RCON
 # ─────────────────────────────────────────
 
 import socket
